@@ -1,7 +1,8 @@
 package rocks.zipcode.textedit;
 
 import javax.swing.*;
-import javax.swing.border.Border;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileSystemView;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -15,14 +16,14 @@ import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public final class ZipEdit extends JFrame implements ActionListener{
+public final class ZipEdit extends JFrame implements ActionListener, DocumentListener {
     private JTextArea area;
     private JFrame frame;
-    private String filename = "untitled";
+    private String filename = "untitled.txt";
 
     private boolean isOnSavedFile = false;
     private boolean isEdited = false;
-    private File onEditingFilePath = null;
+    private File onEditingFile = null;
     // --------------------------------------------------------------------------
     public ZipEdit() {  }
     public static void main(String[] args) {
@@ -42,6 +43,8 @@ public final class ZipEdit extends JFrame implements ActionListener{
 
         // Set attributes of the app window
         area = new JTextArea();
+        area.getDocument().addDocumentListener(this); // added listener for document
+
         //Border blackline = BorderFactory.createLineBorder(Color.black);
         //area.setBorder(blackline);
         area.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -116,87 +119,107 @@ public final class ZipEdit extends JFrame implements ActionListener{
         String ae = e.getActionCommand();
         int returnValue;
         if (ae.equals("Open")) {
-            returnValue = jfc.showOpenDialog(null);
-            if (returnValue == JFileChooser.APPROVE_OPTION) {
-                File f = new File(jfc.getSelectedFile().getAbsolutePath());
-                this.filename = jfc.getSelectedFile().getName();
-                this.frame.setTitle(this.frameTitle());
-                try{
-                    FileReader read = new FileReader(f);
-                    Scanner scan = new Scanner(read);
-                    while(scan.hasNextLine()){
-                        String line = scan.nextLine() + "\n";
-                        ingest = ingest + line;
-                    }
-                    area.setText(ingest);
-                }
-                catch ( FileNotFoundException ex) { ex.printStackTrace(); }
-            }
-            // SAVE
-        } else if (ae.equals("Save")) {
-            if(isOnSavedFile && onEditingFilePath!=null){
-                try {
-                    FileWriter out = new FileWriter(onEditingFilePath);
-                    out.write(area.getText());
-                    out.close();
-                } catch (FileNotFoundException ex) {
-                    Component f = null;
-                    JOptionPane.showMessageDialog(f,"File not found.");
-                } catch (IOException ex) {
-                    Component f = null;
-                    JOptionPane.showMessageDialog(f,"Error.");
+            if(isEdited){
+                if(save(jfc)){
+                    open(jfc,ingest);
+                    isEdited = false;
                 }
             } else {
-                returnValue = jfc.showSaveDialog(null);
-                if (returnValue == JFileChooser.APPROVE_OPTION) {
-                    String tempFileName = jfc.getSelectedFile().getName();
-                    if(!tempFileName.isBlank() && !tempFileName.isEmpty()){
-                        this.filename = tempFileName;
-                    }
-                    this.frame.setTitle(this.frameTitle());
-                    try {
-                        File f = new File(jfc.getSelectedFile().getAbsolutePath());
-                        onEditingFilePath = f;
-                        FileWriter out = new FileWriter(f);
-                        out.write(area.getText());
-                        out.close();
-                    } catch (FileNotFoundException ex) {
-                        Component f = null;
-                        JOptionPane.showMessageDialog(f,"File not found.");
-                    } catch (IOException ex) {
-                        Component f = null;
-                        JOptionPane.showMessageDialog(f,"Error.");
-                    }
-                }
+                open(jfc,ingest);
+                isEdited = false;
+            }
+
+        // SAVE
+        } else if (ae.equals("Save")) {
+            if(isOnSavedFile && onEditingFile !=null){
+                writeToFile(jfc);
+            } else {
+                save(jfc);
+                isEdited = false;
                 isOnSavedFile = true;
             }
 
-
-//            returnValue = jfc.showSaveDialog(null);
-//            //this.filename = jfc.getSelectedFile().getName();
-//
-//            String tempFileName = jfc.getSelectedFile().getName();
-//            if(!tempFileName.isBlank() && !tempFileName.isEmpty()){
-//                this.filename = tempFileName;
-//            }
-//            this.frame.setTitle(this.frameTitle());
-//            try {
-//                File f = new File(jfc.getSelectedFile().getAbsolutePath());
-//                FileWriter out = new FileWriter(f);
-//                out.write(area.getText());
-//                out.close();
-//            } catch (FileNotFoundException ex) {
-//                Component f = null;
-//                JOptionPane.showMessageDialog(f,"File not found.");
-//            } catch (IOException ex) {
-//                Component f = null;
-//                JOptionPane.showMessageDialog(f,"Error.");
-//            }
+        // NEW
         } else if (ae.equals("New")) {
+            if(isEdited){
+                save(jfc);
+                isEdited = false;
+            }
             area.setText("");
+
+        // QUIT
         } else if (ae.equals("Quit")) {
+            if(isEdited){
+                save(jfc);
+                isEdited = false;
+            }
             System.exit(0);
         }
+    }
+
+    public void open(JFileChooser jfc, String ingest){
+        jfc.setDialogTitle("Choose a file to open");
+        int returnValue = jfc.showOpenDialog(null);
+        if (returnValue == JFileChooser.APPROVE_OPTION) {
+            onEditingFile = new File(jfc.getSelectedFile().getAbsolutePath());
+            this.filename = jfc.getSelectedFile().getName();
+            this.frame.setTitle(this.frameTitle());
+            try{
+                FileReader read = new FileReader(onEditingFile);
+                Scanner scan = new Scanner(read);
+                while(scan.hasNextLine()){
+                    String line = scan.nextLine() + "\n";
+                    ingest = ingest + line;
+                }
+                area.setText(ingest);
+            }
+            catch ( FileNotFoundException ex) { ex.printStackTrace(); }
+        }
+    }
+    public boolean save(JFileChooser jfc){
+        jfc.setSelectedFile( new File(filename)); // added this line
+        jfc.setDialogTitle("Save your changes");
+        int returnValue = jfc.showSaveDialog(null);
+        if (returnValue == JFileChooser.APPROVE_OPTION) {
+            String tempFileName = jfc.getSelectedFile().getName();
+            if(!tempFileName.isBlank() && !tempFileName.isEmpty()){
+                this.filename = tempFileName;
+            }
+            this.frame.setTitle(this.frameTitle());
+            writeToFile(jfc);
+            return true;
+        }
+        return false;
+    }
+
+    public void writeToFile(JFileChooser jfc){
+        try {
+            onEditingFile = new File(jfc.getSelectedFile().getAbsolutePath());
+            FileWriter out = new FileWriter(onEditingFile);
+            out.write(area.getText());
+            out.close();
+        } catch (FileNotFoundException ex) {
+            Component f = null;
+            JOptionPane.showMessageDialog(f,"File not found.");
+        } catch (IOException ex) {
+            Component f = null;
+            JOptionPane.showMessageDialog(f,"Error.");
+        }
+    }
+
+    @Override
+    public void insertUpdate(DocumentEvent e) {
+        isEdited = true;
+    }
+
+    @Override
+    public void removeUpdate(DocumentEvent e) {
+        isEdited = true;
+    }
+
+    @Override
+    public void changedUpdate(DocumentEvent e) {
+        isEdited = true;
     }
 }
 
