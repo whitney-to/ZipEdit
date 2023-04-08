@@ -4,6 +4,7 @@ import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileSystemView;
+import javax.swing.text.DefaultEditorKit;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -82,9 +83,15 @@ public final class ZipEdit extends JFrame implements ActionListener, DocumentLis
 
         JMenu edit_file = new JMenu("Edit");
 
-        JMenuItem editMenu_cut = new JMenuItem("Cut");
-        JMenuItem editMenu_copy = new JMenuItem("Copy");
-        JMenuItem editMenu_paste = new JMenuItem("Paste");
+        JMenuItem editMenu_cut = new JMenuItem(new DefaultEditorKit.CutAction());
+        editMenu_cut.setText("Cut");
+
+        JMenuItem editMenu_copy = new JMenuItem(new DefaultEditorKit.CopyAction());
+        editMenu_copy.setText("Copy");
+
+        JMenuItem editMenu_paste = new JMenuItem(new DefaultEditorKit.PasteAction());
+        editMenu_paste.setText("Paste");
+
         JMenuItem editMenu_find = new JMenuItem("Find");
 
         editMenu_cut.addActionListener(this);
@@ -117,7 +124,8 @@ public final class ZipEdit extends JFrame implements ActionListener, DocumentLis
         jfc.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
 
         String ae = e.getActionCommand();
-        int returnValue;
+
+        // OPEN
         if (ae.equals("Open")) {
             if(isEdited){
                 if(save(jfc)){
