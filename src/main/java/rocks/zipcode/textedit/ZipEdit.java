@@ -19,14 +19,16 @@ public final class ZipEdit extends JFrame implements ActionListener{
     private JTextArea area;
     private JFrame frame;
     private String filename = "untitled";
-    public ZipEdit() {  }
 
+    private boolean isOnSavedFile = false;
+    private boolean isEdited = false;
+    private File onEditingFilePath = null;
+    // --------------------------------------------------------------------------
+    public ZipEdit() {  }
     public static void main(String[] args) {
         ZipEdit runner = new ZipEdit();
         runner.run();
     }
-
-
     public void run() {
         frame = new JFrame(frameTitle());
 
@@ -72,7 +74,6 @@ public final class ZipEdit extends JFrame implements ActionListener{
         menu_file.add(menuitem_quit);
 
         frame.setJMenuBar(menus);
-        frame.setVisible(true);
 
         // Build the edit menu
 
@@ -108,7 +109,7 @@ public final class ZipEdit extends JFrame implements ActionListener{
     @Override
     public void actionPerformed(ActionEvent e) {
         String ingest = "";
-        JFileChooser jfc = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory());
+        JFileChooser jfc = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory()+"/Desktop");
         jfc.setDialogTitle("Choose destination.");
         jfc.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
 
@@ -133,21 +134,64 @@ public final class ZipEdit extends JFrame implements ActionListener{
             }
             // SAVE
         } else if (ae.equals("Save")) {
-            returnValue = jfc.showSaveDialog(null);
-            this.filename = jfc.getSelectedFile().getName();
-            this.frame.setTitle(this.frameTitle());
-            try {
-                File f = new File(jfc.getSelectedFile().getAbsolutePath());
-                FileWriter out = new FileWriter(f);
-                out.write(area.getText());
-                out.close();
-            } catch (FileNotFoundException ex) {
-                Component f = null;
-                JOptionPane.showMessageDialog(f,"File not found.");
-            } catch (IOException ex) {
-                Component f = null;
-                JOptionPane.showMessageDialog(f,"Error.");
+            if(isOnSavedFile && onEditingFilePath!=null){
+                try {
+                    FileWriter out = new FileWriter(onEditingFilePath);
+                    out.write(area.getText());
+                    out.close();
+                } catch (FileNotFoundException ex) {
+                    Component f = null;
+                    JOptionPane.showMessageDialog(f,"File not found.");
+                } catch (IOException ex) {
+                    Component f = null;
+                    JOptionPane.showMessageDialog(f,"Error.");
+                }
+            } else {
+                returnValue = jfc.showSaveDialog(null);
+                if (returnValue == JFileChooser.APPROVE_OPTION) {
+                    String tempFileName = jfc.getSelectedFile().getName();
+                    if(!tempFileName.isBlank() && !tempFileName.isEmpty()){
+                        this.filename = tempFileName;
+                    }
+                    this.frame.setTitle(this.frameTitle());
+                    try {
+                        File f = new File(jfc.getSelectedFile().getAbsolutePath());
+                        onEditingFilePath = f;
+                        FileWriter out = new FileWriter(f);
+                        out.write(area.getText());
+                        out.close();
+                    } catch (FileNotFoundException ex) {
+                        Component f = null;
+                        JOptionPane.showMessageDialog(f,"File not found.");
+                    } catch (IOException ex) {
+                        Component f = null;
+                        JOptionPane.showMessageDialog(f,"Error.");
+                    }
+                }
+                isOnSavedFile = true;
             }
+
+
+//            returnValue = jfc.showSaveDialog(null);
+//            //this.filename = jfc.getSelectedFile().getName();
+//
+//            String tempFileName = jfc.getSelectedFile().getName();
+//            if(!tempFileName.isBlank() && !tempFileName.isEmpty()){
+//                this.filename = tempFileName;
+//            }
+//            this.frame.setTitle(this.frameTitle());
+//            try {
+//                File f = new File(jfc.getSelectedFile().getAbsolutePath());
+//                FileWriter out = new FileWriter(f);
+//                out.write(area.getText());
+//                out.close();
+//            } catch (FileNotFoundException ex) {
+//                Component f = null;
+//                JOptionPane.showMessageDialog(f,"File not found.");
+//            } catch (IOException ex) {
+//                Component f = null;
+//                JOptionPane.showMessageDialog(f,"Error.");
+//            }
         } else if (ae.equals("New")) {
             area.setText("");
         } else if (ae.equals("Quit")) {
